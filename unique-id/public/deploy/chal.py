@@ -11,32 +11,24 @@ import cairo_sandbox
 
 
 async def deploy(client: AccountClient, player_address: int) -> int:
-    print("[+] impl_1")
-    implementation_1_deployment = await Contract.deploy(
+    print("[+] implementation_v1")
+    implementation_v1_deployment = await Contract.deploy(
         client=client,
-        compiled_contract=Path("compiled/impl_1.json").read_text(),
-        salt=111111,
-    )
-    await implementation_1_deployment.wait_for_acceptance()
-
-    print("[+] impl_2")
-    implementation_2_deployment = await Contract.deploy(
-        client=client,
-        compiled_contract=Path("compiled/impl_2.json").read_text(),
+        compiled_contract=Path("compiled/implementation_v1.json").read_text(),
         constructor_args=[],
         salt=111111,
     )
-    await implementation_2_deployment.wait_for_acceptance()
+    await implementation_v1_deployment.wait_for_acceptance()
 
-    print("[+] deploying puzzle")
+    print("[+] deploying proxy")
     proxy_deployment = await Contract.deploy(
         client=client,
-        compiled_contract=Path("compiled/puzzle_box.json").read_text(),
+        compiled_contract=Path("compiled/proxy.json").read_text(),
         constructor_args=[
             await client.get_class_hash_at(
-                implementation_1_deployment.deployed_contract.address
+                implementation_v1_deployment.deployed_contract.address
             ),
-            implementation_2_deployment.deployed_contract.address
+            client.address,
         ],
     )
     await proxy_deployment.wait_for_acceptance()
@@ -45,12 +37,33 @@ async def deploy(client: AccountClient, player_address: int) -> int:
 
 
 async def checker(
-    client: AccountClient, puzzle_contract: Contract, player_address: int
+    client: AccountClient, proxy_contract: Contract, player_address: int
 ) -> bool:
 
-    solved = (await puzzle_contract.functions["is_solved"].call()).res
+    implementation_class_hash = await client.get_storage_at(
+        proxy_contract.address, get_storage_var_address("implementation"), "latest"
+    )
+    implementation_address = calculate_contract_address_from_hash(
+        salt=111111,
+        class_hash=implementation_class_hash,
+        constructor_calldata=[],
+        deployer_address=0,
+    )
 
-    return solved == 1
+    implemenatation_contract = await Contract.from_address(
+        implementation_address, client
+    )
+
+    wrapper_contract = Contract(
+        proxy_contract.address,
+        implemenatation_contract.data.abi,
+        client,
+    )
+    player_id = (
+        await wrapper_contract.functions["getIdNumber"].call(player_address)
+    ).id_number
+
+    return player_id == 313337
 
 
 cairo_sandbox.run_launcher(
