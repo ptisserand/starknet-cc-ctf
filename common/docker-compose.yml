@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  devnet:
+    ports:
+      - "31337:31337"
+      - "5050:5050"
+    build: ./public
