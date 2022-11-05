@@ -134,4 +134,5 @@ async def get_context(hostname, port, team=TEAM_ID):
         'acc_client': acc_client,
         'contract': contract,
         'player': playerAddress,
+        'contract_address': contractAddress,
     }
