@@ -1,6 +1,8 @@
 import re
 import socket
 import logging
+import shlex
+from subprocess import Popen, PIPE
 
 from starknet_py.contract import Contract
 from starknet_py.net import AccountClient, KeyPair
@@ -35,7 +37,7 @@ def setup_logger(name, level='DEBUG'):
     logger.addHandler(ch)
     return logger
 
-def kill_instance(hostname, port, team=TEAM_ID):
+def _kill_instance(hostname, port, team=TEAM_ID):
     logger.info(f"Kill instance for team: {team}")
     nc_output = ""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -50,7 +52,7 @@ def kill_instance(hostname, port, team=TEAM_ID):
     logger.debug(nc_output)
     return nc_output
 
-def start_instance(hostname, port, team=TEAM_ID):
+def _start_instance(hostname, port, team=TEAM_ID):
     logger.info(f"Start instance for team: {team}")
     nc_output = ""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -64,6 +66,16 @@ def start_instance(hostname, port, team=TEAM_ID):
             nc_output += data
     logger.debug(nc_output)
     return nc_output
+
+def start_instance_docker_exec(hostname, port, team=TEAM_ID):
+    logger.info(f"(docker exec) Start instance for team: {team}")
+    # docker exec  -u ctf common-devnet-1 /bin/bash -c "echo -e '1\n42\n' | /home/ctf/handler.sh"
+    container_name = "common-devnet-1"
+    cmd = f"docker exec -u ctf {container_name} /bin/bash -c \"echo -e '1\n{team}\n' | /home/ctf/handler.sh\""
+    cmd = shlex.split(cmd)
+    p = Popen(cmd, stdin=PIPE, stdout=PIPE)
+    output, err = p.communicate()
+    return output.decode()
 
 def get_flag(hostname, port, team=TEAM_ID):
     logger.info(f"Get flag for team: {team}")
@@ -82,7 +94,7 @@ def get_flag(hostname, port, team=TEAM_ID):
     return nc_output.split()[-1]
 
 
-async def get_context(hostname, port, team=TEAM_ID):
+async def get_context(hostname, port, team=TEAM_ID, start_instance=_start_instance, kill_instance=_kill_instance):
     logger.info(f"Get context for team: {team}")
     # First kill last instance if any
     kill_instance(hostname, port, team)
