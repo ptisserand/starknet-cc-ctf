@@ -2,7 +2,7 @@ import asyncio
 import logging
 from common import utils
 
-logger = utils.setup_logger("frozen-finance")
+logger = utils.setup_logger("solve-me")
 
 async def main(hostname='127.0.0.1', port=31337):
     ctx = await utils.get_context(hostname, port)
