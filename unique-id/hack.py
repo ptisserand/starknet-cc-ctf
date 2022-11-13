@@ -25,7 +25,7 @@ async def main(hostname='127.0.0.1', port=31337):
     contract_src_file = current_path / "implementation_v2.cairo"
     # if not compilation at runtime
     # contract_file = current_path / "build/implementation_v2.json"
-    compiled_contract = contract_file.read_text()
+    # compiled_contract = contract_file.read_text()
 
     logger.info("Deploying implementation v2")
     implementation_v2_deployment = await Contract.deploy(
